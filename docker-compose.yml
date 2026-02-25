@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: printuser
+      POSTGRES_PASSWORD: print123
+      POSTGRES_DB: printing_platform
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U printuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cura-engine:
+    build:
+      context: ./cura-engine
+      dockerfile: Dockerfile
+    volumes:
+      - ./uploads:/uploads
+      - ./gcode:/gcode
+    command: tail -f /dev/null
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://printuser:print123@postgres:5432/printing_platform
+      CURA_ENGINE_HOST: cura-engine
+      CURA_ENGINE_PATH: /usr/bin/CuraEngine
+      PRINTER_DEF_PATH: /app/cura-engine/fdmprinter.def.json
+      SECRET_KEY: your-secret-key-change-in-production
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 1440
+    depends_on:
+      postgres:
+        condition: service_healthy
+      cura-engine:
+        condition: service_started
+    volumes:
+      - ./uploads:/app/uploads
+      - ./gcode:/app/gcode
+      - ./cura-engine:/app/cura-engine
+      - ./backend/app:/tmp/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /tmp/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
