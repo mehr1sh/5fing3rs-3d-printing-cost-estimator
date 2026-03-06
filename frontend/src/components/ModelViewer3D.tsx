@@ -115,9 +115,18 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId }) => {
         scene.add(mesh);
         meshRef.current = mesh;
 
-        // Calculate bounding box and info
+        // Step 1: Get bounding box BEFORE any position adjustment
         const box = new THREE.Box3().setFromObject(mesh);
-        mesh.position.y = mesh.position.y - box.min.y;
+
+        // Step 2: Center the mesh on X and Z axes (so it sits at origin horizontally)
+        const centerXZ = box.getCenter(new THREE.Vector3());
+        mesh.position.x -= centerXZ.x;
+        mesh.position.z -= centerXZ.z;
+
+        // Step 3: Lift mesh so its bottom sits on the grid (y=0)
+        mesh.position.y -= box.min.y;
+
+        // Step 4: Recalculate bounding box AFTER repositioning
         box.setFromObject(mesh);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
@@ -136,12 +145,14 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId }) => {
           triangleCount: geometry.attributes.position.count / 3,
         });
 
-        // Center camera on model
+        // Step 5: Point camera at the true center of the repositioned model
+        // Use a diagonal offset based on model size so the whole model is visible
+        const maxDim = Math.max(size.x, size.y, size.z);
         controls.target.copy(center);
         camera.position.set(
-          center.x + size.x,
-          center.y + size.y,
-          center.z + size.z
+          center.x + maxDim * 1.5,
+          center.y + maxDim * 1.5,
+          center.z + maxDim * 1.5
         );
         camera.lookAt(center);
         controls.update();
@@ -227,12 +238,13 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId }) => {
       const box = new THREE.Box3().setFromObject(meshRef.current);
       const center = box.getCenter(new THREE.Vector3());
       const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
 
       controlsRef.current.target.copy(center);
       cameraRef.current.position.set(
-        center.x + size.x,
-        center.y + size.y,
-        center.z + size.z
+        center.x + maxDim * 1.5,
+        center.y + maxDim * 1.5,
+        center.z + maxDim * 1.5
       );
       controlsRef.current.update();
     }
