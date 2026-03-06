@@ -152,6 +152,30 @@ const GCodePreview: React.FC<GCodePreviewProps> = ({ gcodeUrl }) => {
           }
         }
 
+        // ── Centre the model on the grid origin ─────────────────────────
+        // The slicer offsets the model to X=100,Y=100 on the printer bed,
+        // so we subtract the bounding box centre from every point so that
+        // the print sits at (0, 0) — the centre of the grid helper.
+        // Only centre on X and Z (horizontal axes) — do NOT offset Y (height)
+        // so the model sits ON TOP of the grid, not inside it
+        const offsetX = isFinite(minX) ? (minX + maxX) / 2 : 0;
+        const offsetZ = isFinite(minZ) ? (minZ + maxZ) / 2 : 0;
+        // Shift Y so the bottom of the model sits exactly on the grid (y=0)
+        const offsetY = isFinite(minY) ? minY : 0;
+
+        for (const pts of tmpPoints) {
+          for (let i = 0; i < pts.length; i += 3) {
+            pts[i]     -= offsetX;
+            pts[i + 1] -= offsetY;
+            pts[i + 2] -= offsetZ;
+          }
+        }
+
+        // Recentre bbox values too (used for camera targeting below)
+        minX -= offsetX; maxX -= offsetX;
+        minY -= offsetY; maxY -= offsetY;
+        minZ -= offsetZ; maxZ -= offsetZ;
+
         // ── Build Three.js objects — ONE LineSegments per layer ──────────
         const numLayers = tmpPoints.length;
         const layerSegs: THREE.LineSegments[] = [];
