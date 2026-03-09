@@ -44,7 +44,7 @@ Once the containers are running:
 
 ---
 
-## 🛑 Stopping the Application
+## Stopping the Application
 To stop the services without deleting your database/data:
 ```bash
 docker compose stop

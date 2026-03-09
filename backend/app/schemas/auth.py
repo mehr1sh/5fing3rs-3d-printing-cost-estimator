@@ -10,11 +10,16 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
+class OtpVerify(BaseModel):
+    username: str
+    code: str
+
 class UserResponse(BaseModel):
     id: int
     username: str
     email: Optional[str]
     role: str
+    is_verified: bool
 
     class Config:
         from_attributes = True

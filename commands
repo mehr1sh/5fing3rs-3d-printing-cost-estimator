@@ -1,0 +1,17 @@
+to build 
+docker compose up --build -d
+
+to view logs for mail verification code 
+docker logs final_c-backend-1
+
+to view databae Postgres
+docker exec -it final_c-postgres-1 psql -U printuser -d printing_platform
+
+to view all registered users, run this:
+docker exec -it final_c-postgres-1 psql -U printuser -d printing_platform -c "SELECT id, username, email, role, is_verified, verification_code FROM users;"
+
+To view your cost estimation materials (like PLA):
+docker exec -it final_c-postgres-1 psql -U printuser -d printing_platform -c "SELECT * FROM materials;"
+
+To seed data if calculate cost fails - run seed_data.py
+docker exec -it final_c-backend-1 python seed_data.py

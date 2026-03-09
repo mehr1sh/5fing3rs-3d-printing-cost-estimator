@@ -13,7 +13,10 @@ async def send_email(to_email: str, subject: str, html_body: str, text_body: Opt
     """Send email via Mailtrap API."""
     if not MAILTRAP_API_TOKEN:
         # In development, just log the email
+        print("========================================")
         print(f"Email would be sent to {to_email}: {subject}")
+        print(html_body)
+        print("========================================")
         return True
     
     try:
@@ -122,6 +125,23 @@ async def send_slicing_failed_email(job: Job, error_message: str, user_email: Op
         </ul>
         <p>If the problem persists, please contact support.</p>
         <p><a href="http://localhost:3000/job/{job.job_id}">View Job Details</a></p>
+    </body>
+    </html>
+    """
+    
+    return await send_email(user_email, subject, html_body)
+
+async def send_otp_email(user_email: str, code: str) -> bool:
+    """Send a 6-digit OTP code for email verification."""
+    subject = "Verify your 3D Printing Platform Email"
+    html_body = f"""
+    <html>
+    <body>
+        <h2>Email Verification</h2>
+        <p>Welcome to the 3D Printing Platform!</p>
+        <p>Your verification code is: <strong><span style="font-size: 24px;">{code}</span></strong></p>
+        <p>This code will expire in 15 minutes.</p>
+        <p>If you did not request this code, please ignore this email.</p>
     </body>
     </html>
     """

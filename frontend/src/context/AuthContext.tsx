@@ -7,6 +7,7 @@ interface AuthContextType {
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string, email?: string) => Promise<void>;
+  verifyOtp: (username: string, code: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -21,7 +22,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     const userStr = localStorage.getItem('user');
-    
+
     if (token && userStr) {
       try {
         const userData = JSON.parse(userStr);
@@ -49,8 +50,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const register = async (username: string, password: string, email?: string) => {
     await authAPI.register(username, password, email);
-    // Auto-login after registration
-    await login(username, password);
+    // Auto-login is handled by verifyOtp now since users must verify their email first
+  };
+
+  const verifyOtp = async (username: string, code: string) => {
+    const response: TokenResponse = await authAPI.verifyOtp(username, code);
+    localStorage.setItem('access_token', response.access_token);
+    localStorage.setItem('user', JSON.stringify(response.user));
+    setUser(response.user);
   };
 
   const logout = () => {
@@ -66,6 +73,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         loading,
         login,
         register,
+        verifyOtp,
         logout,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',

@@ -54,6 +54,10 @@ export const authAPI = {
     });
     return response.data;
   },
+  verifyOtp: async (username: string, code: string): Promise<TokenResponse> => {
+    const response = await api.post('/api/auth/verify-otp', { username, code });
+    return response.data;
+  },
   getMe: async (): Promise<User> => {
     const response = await api.get('/api/auth/me');
     return response.data;
