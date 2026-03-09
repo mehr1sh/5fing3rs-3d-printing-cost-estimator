@@ -4,6 +4,7 @@ import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
+import ViewerPage from './pages/ViewerPage';
 import JobDetail from './pages/JobDetail';
 import AdminMaterials from './pages/AdminMaterials';
 import AdminConfig from './pages/AdminConfig';
@@ -47,6 +48,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Home />} />
+      <Route path="/viewer" element={<ViewerPage />} />
       <Route
         path="/dashboard"
         element={
