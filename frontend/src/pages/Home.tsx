@@ -25,6 +25,7 @@ const Home: React.FC = () => {
   const { login, register, verifyOtp } = useAuth();
   const navigate = useNavigate();
 
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -79,9 +80,18 @@ const Home: React.FC = () => {
         <Typography variant="h4" component="h1" gutterBottom align="center">
           3D Printing Cost Estimation Platform
         </Typography>
-        <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
+        <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>
           Five Fingers Innovative Solutions
         </Typography>
+        <Button
+          fullWidth
+          variant="outlined"
+          size="small"
+          sx={{ mb: 3 }}
+          onClick={() => navigate('/viewer')}
+        >
+          Try 3D Viewer (no login required)
+        </Button>
 
         {!otpMode && (
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
