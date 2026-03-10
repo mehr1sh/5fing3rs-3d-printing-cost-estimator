@@ -41,7 +41,6 @@ gcode/
 *.stp
 
 # CuraEngine binary / source (large, not part of the project)
-cura-engine/
 cura-engine-binary/
 CuraEngine/
 

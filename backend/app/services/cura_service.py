@@ -33,6 +33,10 @@ def build_cura_command(
     settings.append(f"material_print_temperature={params.nozzleTemp}")
     settings.append(f"material_bed_temperature={params.bedTemp}")
     
+    # Required shrinkages for CuraEngine 5.x fdmprinter.def.json
+    settings.append("material_shrinkage_percentage_xy=100")
+    settings.append("material_shrinkage_percentage_z=100")
+    
     # Layer settings
     settings.append(f"layer_height={params.layerHeight}")
     settings.append(f"top_bottom_thickness={params.topBottomLayers * params.layerHeight}")
