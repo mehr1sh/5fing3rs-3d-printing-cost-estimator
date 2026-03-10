@@ -14,22 +14,27 @@ def build_cura_command(
     params: SlicingParams,
     printer_def_path: Optional[str] = None
 ) -> list:
-    """Build CuraEngine command with all parameters."""
+    """Build CuraEngine command with all parameters.
+    
+    Verified working order:
+      CuraEngine slice -j def.json -o output.gcode -s setting=val ... -l model.stl
+    """
     if printer_def_path is None:
         printer_def_path = PRINTER_DEF_PATH
     
+    # Start with binary, verb, definition file, and output file
     cmd = [
         CURA_ENGINE_PATH,
         "slice",
-        "-j", printer_def_path
+        "-j", printer_def_path,
+        "-o", gcode_path,
     ]
     
-    # Add slicing parameters
+    # Build list of global settings (applied before loading the model)
     settings = []
     
-    # Material settings
-    settings.append(f"material_print_temperature={params.nozzleTemp}")
-    settings.append(f"material_bed_temperature={params.bedTemp}")
+    # Material settings (NOTE: overriding nozzle/bed temperature causes an infinite loop
+    # in Cura 5.0 fdmprinter definitions! DO NOT add material_print_temperature here)
     
     # Required shrinkages for CuraEngine 5.x fdmprinter.def.json
     settings.append("material_shrinkage_percentage_xy=100")
@@ -41,14 +46,9 @@ def build_cura_command(
     
     # Infill settings
     settings.append(f"infill_sparse_density={params.infillDensity}")
-    
-    # Infill pattern mapping
     pattern_map = {
-        "grid": "grid",
-        "lines": "lines",
-        "triangles": "triangles",
-        "cubic": "cubic",
-        "gyroid": "gyroid"
+        "grid": "grid", "lines": "lines", "triangles": "triangles",
+        "cubic": "cubic", "gyroid": "gyroid"
     }
     settings.append(f"infill_pattern={pattern_map.get(params.infillPattern, 'grid')}")
     
@@ -65,9 +65,7 @@ def build_cura_command(
             settings.append("support_structure=everywhere")
         else:
             settings.append("support_enable=False")
-        
-        if params.supportEnabled:
-            settings.append(f"support_infill_rate={params.supportDensity}")
+        settings.append(f"support_infill_rate={params.supportDensity}")
     else:
         settings.append("support_enable=False")
     
@@ -77,23 +75,16 @@ def build_cura_command(
     settings.append(f"speed_topbottom={params.printSpeed * 0.5}")
     settings.append(f"speed_infill={params.printSpeed}")
     
-    # Build plate adhesion
-    adhesion_map = {
-        "none": "none",
-        "skirt": "skirt",
-        "brim": "brim",
-        "raft": "raft"
-    }
+    # Build plate adhesion — default to none to avoid raft/brim
+    adhesion_map = {"none": "none", "skirt": "skirt", "brim": "brim", "raft": "raft"}
     settings.append(f"adhesion_type={adhesion_map.get(params.buildPlateAdhesion, 'none')}")
     
-    # Add all settings to command
+    # Append all settings flags
     for setting in settings:
         cmd.extend(["-s", setting])
-        
-    cmd.extend([
-        "-o", gcode_path,
-        "-l", stl_path
-    ])
+    
+    # Finally load the model — MUST come after all -s global flags
+    cmd.extend(["-l", stl_path])
     
     return cmd
 
