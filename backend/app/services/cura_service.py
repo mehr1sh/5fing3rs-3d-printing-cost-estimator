@@ -91,6 +91,11 @@ def build_cura_command(
     # Add all settings to command
     for setting in settings:
         cmd.extend(["-s", setting])
+        
+    cmd.extend([
+        "-l", stl_path,
+        "-o", gcode_path
+    ])
     
     return cmd
 
