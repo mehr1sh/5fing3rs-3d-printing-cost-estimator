@@ -17,26 +17,9 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install CuraEngine - try multiple sources
-WORKDIR /tmp
-RUN (wget -q https://github.com/Ultimaker/CuraEngine/releases/download/5.7.2/CuraEngine-5.7.2-linux.AppImage -O /tmp/CuraEngine.AppImage && \
-     chmod +x /tmp/CuraEngine.AppImage && \
-     /tmp/CuraEngine.AppImage --appimage-extract 2>/dev/null && \
-     mv squashfs-root/usr/bin/CuraEngine /usr/bin/CuraEngine 2>/dev/null && \
-     rm -rf /tmp/CuraEngine.AppImage /tmp/squashfs-root) || \
-    (wget -q https://github.com/Ultimaker/CuraEngine/archive/refs/tags/5.7.2.tar.gz -O /tmp/cura.tar.gz && \
-     tar -xzf /tmp/cura.tar.gz && \
-     cd CuraEngine-5.7.2 && \
-     mkdir build && cd build && \
-     cmake .. && make -j$(nproc) && \
-     cp CuraEngine /usr/bin/CuraEngine && \
-     cd / && rm -rf /tmp/cura.tar.gz /tmp/CuraEngine-5.7.2) || \
-    (echo "#!/bin/bash" > /usr/bin/CuraEngine && \
-     echo 'echo "Error: CuraEngine not installed. Slicing will fail."' >> /usr/bin/CuraEngine && \
-     echo 'echo "Please install CuraEngine manually or use a different slicing method."' >> /usr/bin/CuraEngine && \
-     echo 'exit 1' >> /usr/bin/CuraEngine && \
-     chmod +x /usr/bin/CuraEngine && \
-     echo "CuraEngine installation failed - using fallback script")
+# Install CuraEngine via apt
+RUN apt-get update && apt-get install -y cura-engine && rm -rf /var/lib/apt/lists/*
+
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
