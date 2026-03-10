@@ -21,9 +21,7 @@ def build_cura_command(
     cmd = [
         CURA_ENGINE_PATH,
         "slice",
-        "-j", printer_def_path,
-        "-l", stl_path,
-        "-o", gcode_path
+        "-j", printer_def_path
     ]
     
     # Add slicing parameters
