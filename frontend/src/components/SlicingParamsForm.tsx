@@ -32,7 +32,7 @@ const SlicingParamsForm: React.FC<SlicingParamsFormProps> = ({ onSubmit, loading
     supportType: 'none',
     supportDensity: 20,
     printSpeed: 50,
-    buildPlateAdhesion: 'skirt',
+    buildPlateAdhesion: 'none',
     nozzleTemp: 210,
     bedTemp: 60,
   });
