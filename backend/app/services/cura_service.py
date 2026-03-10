@@ -93,8 +93,7 @@ def build_cura_command(
         cmd.extend(["-s", setting])
         
     cmd.extend([
-        "-l", stl_path,
-        "-o", gcode_path
+        "-l", stl_path
     ])
     
     return cmd
