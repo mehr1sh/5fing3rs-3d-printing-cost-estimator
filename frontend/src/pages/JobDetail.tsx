@@ -24,7 +24,7 @@ import type { Job, SlicingParams, CostEstimate } from '../services/types';
 const JobDetail: React.FC = () => {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const [job, setJob] = useState<Job | null>(null);
   const [costEstimate, setCostEstimate] = useState<CostEstimate | null>(null);
   const [loading, setLoading] = useState(true);
