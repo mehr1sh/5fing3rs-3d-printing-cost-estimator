@@ -5,7 +5,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
   Box, ButtonGroup, Button, Typography, Paper,
   Slider, TextField, Grid, Divider, FormControlLabel, Switch,
+  Accordion, AccordionSummary, AccordionDetails, Stack, useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
 
 interface ModelViewer3DProps {
   modelUrl: string;
@@ -33,6 +36,8 @@ const THEME = {
 
 const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const muiTheme = useTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down('md'));
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -48,14 +53,15 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
   const [modelInfo, setModelInfo] = useState<any>(null);
   const [transform, setTransform] = useState<Transform>(DEFAULT_TRANSFORM);
   const [lockToGrid, setLockToGrid] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const theme = THEME.light;
+
     // Scene setup
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(THEME.dark.bg);
+    scene.background = new THREE.Color(theme.bg);
     sceneRef.current = scene;
 
     // Camera
@@ -82,18 +88,18 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
     controlsRef.current = controls;
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, THEME.dark.ambientIntensity);
+    const ambientLight = new THREE.AmbientLight(0xffffff, theme.ambientIntensity);
     scene.add(ambientLight);
     ambientLightRef.current = ambientLight;
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, THEME.dark.dirIntensity);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, theme.dirIntensity);
     directionalLight.position.set(50, 50, 50);
     directionalLight.castShadow = true;
     scene.add(directionalLight);
     dirLightRef.current = directionalLight;
 
     // Grid helper (build plate)
-    const gridHelper = new THREE.GridHelper(200, 20, THEME.dark.gridCenter, THEME.dark.gridLines);
+    const gridHelper = new THREE.GridHelper(200, 20, theme.gridCenter, theme.gridLines);
     scene.add(gridHelper);
     gridRef.current = gridHelper;
 
@@ -118,6 +124,8 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
         const material = new THREE.MeshStandardMaterial({
           color: 0x1976d2,
           flatShading: false,
+          metalness: 0.1,
+          roughness: 0.65,
         });
         currentMaterial = material;
 
@@ -244,36 +252,25 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
 
     switch (viewMode) {
       case 'solid':
+        material.color.set(0x1976d2);
         material.wireframe = false;
         material.transparent = false;
         material.opacity = 1.0;
         break;
       case 'wireframe':
+        material.color.set(0x1976d2);
         material.wireframe = true;
         material.transparent = false;
         material.opacity = 1.0;
         break;
       case 'layer':
+        material.color.set(0x1f7a6b);
         material.wireframe = false;
-        material.transparent = false;
-        material.opacity = 1.0;
+        material.transparent = true;
+        material.opacity = 0.82;
         break;
     }
   }, [viewMode]);
-
-  // Apply dark/light theme to Three.js scene
-  useEffect(() => {
-    const t = darkMode ? THEME.dark : THEME.light;
-    if (sceneRef.current) (sceneRef.current.background as THREE.Color).setHex(t.bg);
-    if (ambientLightRef.current) ambientLightRef.current.intensity = t.ambientIntensity;
-    if (dirLightRef.current) dirLightRef.current.intensity = t.dirIntensity;
-    if (gridRef.current && sceneRef.current) {
-      sceneRef.current.remove(gridRef.current);
-      const newGrid = new THREE.GridHelper(200, 20, t.gridCenter, t.gridLines);
-      sceneRef.current.add(newGrid);
-      gridRef.current = newGrid;
-    }
-  }, [darkMode]);
 
   // Apply transform panel values to the mesh
   useEffect(() => {
@@ -316,7 +313,7 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
     label: string, field: keyof Transform, min: number, max: number, step: number, digits = 1
   ) => (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-      <Typography variant="caption" sx={{ width: 28, flexShrink: 0, color: 'text.secondary' }}>{label}</Typography>
+      <Typography variant="caption" sx={{ width: { xs: 24, sm: 28 }, flexShrink: 0, color: 'text.secondary' }}>{label}</Typography>
       <Slider
         size="small" min={min} max={max} step={step}
         value={transform[field]}
@@ -328,103 +325,158 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
         value={Number(transform[field]).toFixed(digits)}
         onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) updateTransform(field, v); }}
         inputProps={{ min, max, step, style: { padding: '4px 6px', width: 52 } }}
-        sx={{ width: 72, flexShrink: 0 }}
+        sx={{ width: { xs: 68, sm: 72 }, flexShrink: 0 }}
       />
     </Box>
   );
 
-  return (
-    <Box>
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <ButtonGroup sx={{ mb: 2 }}>
-          <Button
-            variant={viewMode === 'solid' ? 'contained' : 'outlined'}
-            onClick={() => setViewMode('solid')}
-          >
-            Solid
-          </Button>
-          <Button
-            variant={viewMode === 'wireframe' ? 'contained' : 'outlined'}
-            onClick={() => setViewMode('wireframe')}
-          >
-            Wireframe
-          </Button>
-          <Button variant="outlined" onClick={resetView}>
-            Reset View
-          </Button>
-          <Button variant="outlined" onClick={() => setDarkMode(d => !d)}>
-            {darkMode ? 'Light Mode' : 'Dark Mode'}
-          </Button>
-        </ButtonGroup>
+  const viewerShell = (
+    <Box
+      ref={containerRef}
+      sx={{
+        width: '100%',
+        height: { xs: 380, sm: 460, md: 560 },
+        borderRadius: 2,
+        overflow: 'hidden',
+        position: 'relative',
+        border: '1px solid',
+        borderColor: '#dfe7f2',
+        background: 'linear-gradient(180deg, #fbfdff 0%, #f1f6fc 100%)',
+      }}
+    >
+      {loading && (
+        <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', zIndex: 2 }}>
+          <Paper sx={{ px: 2.5, py: 1.5, borderRadius: 999, background: 'rgba(255,255,255,0.92)', boxShadow: 'none' }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              Loading model...
+            </Typography>
+          </Paper>
+        </Box>
+      )}
+      {error && (
+        <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', zIndex: 2, p: 2 }}>
+          <Paper sx={{ px: 2.5, py: 1.5, borderRadius: 2, background: 'rgba(211, 47, 47, 0.12)', border: '1px solid rgba(211, 47, 47, 0.22)', boxShadow: 'none' }}>
+            <Typography variant="body2" color="error.main" sx={{ fontWeight: 600, textAlign: 'center' }}>
+              {error}
+            </Typography>
+          </Paper>
+        </Box>
+      )}
+      <Box sx={{ position: 'absolute', right: 14, bottom: 14, zIndex: 1 }}>
+        <Paper sx={{ px: 1.5, py: 0.75, borderRadius: 999, bgcolor: 'rgba(255,255,255,0.92)', boxShadow: 'none', border: '1px solid #e6ebf1' }}>
+          <Typography variant="caption" sx={{ color: '#526071', fontWeight: 600 }}>
+            Drag to orbit · Scroll to zoom
+          </Typography>
+        </Paper>
+      </Box>
+    </Box>
+  );
 
-        {modelInfo && (
-          <Box>
-            <Typography variant="body2">
-              <strong>Dimensions:</strong> {modelInfo.dimensions.x} × {modelInfo.dimensions.y} ×{' '}
-              {modelInfo.dimensions.z} mm
-            </Typography>
-            <Typography variant="body2">
-              <strong>Triangles:</strong> {modelInfo.triangleCount.toLocaleString()}
-            </Typography>
-          </Box>
-        )}
-      </Paper>
+  const transformPanel = (
+    <Paper
+      sx={{
+        p: { xs: 1.5, sm: 2 },
+        height: '100%',
+        background: 'linear-gradient(180deg, #ffffff 0%, #f7faff 100%)',
+        borderColor: '#e6ebf1',
+      }}
+    >
+      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.25 }}>
+        Transform
+      </Typography>
+      <Divider sx={{ mb: 1.25 }} />
+      <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: 'text.secondary' }}>Position</Typography>
+      {renderTransformRow('X', 'posX', -100, 100, 0.5)}
+      {renderTransformRow('Y', 'posY', -100, 100, 0.5)}
+      {renderTransformRow('Z', 'posZ', -100, 100, 0.5)}
+      <Divider sx={{ my: 1 }} />
+      <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: 'text.secondary' }}>Rotation (°)</Typography>
+      {renderTransformRow('RX', 'rotX', -180, 180, 1, 0)}
+      {renderTransformRow('RY', 'rotY', -180, 180, 1, 0)}
+      {renderTransformRow('RZ', 'rotZ', -180, 180, 1, 0)}
+      <Divider sx={{ my: 1 }} />
+      <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: 'text.secondary' }}>Scale</Typography>
+      {renderTransformRow('S', 'scale', 0.1, 5, 0.05, 2)}
+      <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+        <Button fullWidth size="small" variant="outlined" onClick={resetView} sx={{ textTransform: 'none', fontWeight: 600 }}>
+          Reset view
+        </Button>
+        <Button fullWidth size="small" variant="outlined" onClick={resetTransform} sx={{ textTransform: 'none', fontWeight: 600 }}>
+          Reset transform
+        </Button>
+      </Stack>
+      <FormControlLabel
+        sx={{ mt: 1, alignItems: 'flex-start' }}
+        control={<Switch size="small" checked={lockToGrid} onChange={(e) => setLockToGrid(e.target.checked)} />}
+        label={<Typography variant="caption">Lock to grid</Typography>}
+      />
+    </Paper>
+  );
+
+  return (
+    <Paper sx={{ p: { xs: 1.5, sm: 2, md: 2.5 }, mb: 2, animation: 'slideInUp 0.6s ease-out' }}>
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+          Model Viewer
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Inspect geometry and adjust transforms before slicing.
+        </Typography>
+      </Box>
+
+      <ButtonGroup sx={{ mb: 2 }}>
+        <Button variant={viewMode === 'solid' ? 'contained' : 'outlined'} onClick={() => setViewMode('solid')} sx={{ textTransform: 'none' }}>
+          Solid
+        </Button>
+        <Button variant={viewMode === 'wireframe' ? 'contained' : 'outlined'} onClick={() => setViewMode('wireframe')} sx={{ textTransform: 'none' }}>
+          Wireframe
+        </Button>
+        <Button variant={viewMode === 'layer' ? 'contained' : 'outlined'} onClick={() => setViewMode('layer')} sx={{ textTransform: 'none' }}>
+          Layer
+        </Button>
+      </ButtonGroup>
+
+      {modelInfo && (
+        <Grid container spacing={1.5} sx={{ mb: 2 }}>
+          {[
+            { label: 'Width', value: `${modelInfo.dimensions.x} mm` },
+            { label: 'Depth', value: `${modelInfo.dimensions.y} mm` },
+            { label: 'Height', value: `${modelInfo.dimensions.z} mm` },
+            { label: 'Triangles', value: Number(modelInfo.triangleCount).toLocaleString() },
+          ].map((item, index) => (
+            <Grid item xs={6} sm={3} key={item.label} sx={{ animation: `fadeIn 0.4s ease-out ${index * 0.08}s both` }}>
+              <Paper sx={{ p: 1.25, borderRadius: 2, background: 'rgba(15, 108, 189, 0.04)', boxShadow: 'none', borderColor: '#e6ebf1' }}>
+                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  {item.label}
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 800, mt: 0.35 }}>
+                  {item.value}
+                </Typography>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+      )}
 
       <Grid container spacing={2}>
-        <Grid item xs={12} md={9}>
-          <Box
-            ref={containerRef}
-            sx={{
-              width: '100%',
-              height: '550px',
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 1,
-              overflow: 'hidden',
-              position: 'relative',
-            }}
-          >
-            {loading && (
-              <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                <Typography>Loading model...</Typography>
-              </Box>
-            )}
-            {error && (
-              <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'error.main' }}>
-                <Typography>{error}</Typography>
-              </Box>
-            )}
-          </Box>
+        <Grid item xs={12} md={8}>
+          {viewerShell}
         </Grid>
 
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 1.5, height: '100%' }}>
-            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>Transform</Typography>
-            <Divider sx={{ mb: 1 }} />
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Position</Typography>
-            {renderTransformRow('X', 'posX', -100, 100, 0.5)}
-            {renderTransformRow('Y', 'posY', -100, 100, 0.5)}
-            {renderTransformRow('Z', 'posZ', -100, 100, 0.5)}
-            <Divider sx={{ my: 1 }} />
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Rotation (°)</Typography>
-            {renderTransformRow('RX', 'rotX', -180, 180, 1, 0)}
-            {renderTransformRow('RY', 'rotY', -180, 180, 1, 0)}
-            {renderTransformRow('RZ', 'rotZ', -180, 180, 1, 0)}
-            <Divider sx={{ my: 1 }} />
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Scale</Typography>
-            {renderTransformRow('S', 'scale', 0.1, 5, 0.05, 2)}
-            <Divider sx={{ my: 1 }} />
-            <FormControlLabel
-              control={<Switch size="small" checked={lockToGrid} onChange={(e) => setLockToGrid(e.target.checked)} />}
-              label={<Typography variant="caption">Lock to grid</Typography>}
-            />
-            <Button fullWidth size="small" variant="outlined" onClick={resetTransform} sx={{ mt: 1 }}>
-              Reset Transform
-            </Button>
-          </Paper>
+        <Grid item xs={12} md={4}>
+          {isMobile ? (
+            <Accordion defaultExpanded sx={{ boxShadow: 'none', '&:before': { display: 'none' } }}>
+              <AccordionSummary expandIcon={<ExpandMoreRoundedIcon />}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Transform controls</Typography>
+              </AccordionSummary>
+              <AccordionDetails sx={{ pt: 0 }}>{transformPanel}</AccordionDetails>
+            </Accordion>
+          ) : (
+            transformPanel
+          )}
         </Grid>
       </Grid>
-    </Box>
+    </Paper>
   );
 };
 
