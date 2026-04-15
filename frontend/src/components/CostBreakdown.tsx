@@ -9,6 +9,7 @@ import {
   TableRow,
   Divider,
   Button,
+  Grid,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import type { CostEstimate } from '../services/types';
@@ -19,7 +20,6 @@ interface CostBreakdownProps {
 }
 
 const CostBreakdown: React.FC<CostBreakdownProps> = ({ estimate, filename }) => {
-
   const handleDownloadPDF = () => {
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-IN', {
@@ -61,19 +61,6 @@ const CostBreakdown: React.FC<CostBreakdownProps> = ({ estimate, filename }) => 
     .brand p {
       color: #666;
       font-size: 13px;
-      margin-top: 4px;
-    }
-    .quote-meta {
-      text-align: right;
-    }
-    .quote-meta .quote-id {
-      font-size: 20px;
-      font-weight: 700;
-      color: #1a1a2e;
-    }
-    .quote-meta p {
-      color: #666;
-      font-size: 12px;
       margin-top: 4px;
     }
     .section-title {
@@ -239,7 +226,6 @@ const CostBreakdown: React.FC<CostBreakdownProps> = ({ estimate, filename }) => 
 </body>
 </html>`;
 
-    // Open in new tab and trigger print/save as PDF
     const win = window.open('', '_blank');
     if (win) {
       win.document.write(html);
@@ -252,11 +238,14 @@ const CostBreakdown: React.FC<CostBreakdownProps> = ({ estimate, filename }) => 
   };
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Paper sx={{ p: { xs: 2.5, md: 3 } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">
-          Cost Breakdown
-        </Typography>
+        <Box>
+          <Typography variant="h6">Cost Breakdown</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Structured quote generated from slicing output.
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           startIcon={<DownloadIcon />}
@@ -266,6 +255,33 @@ const CostBreakdown: React.FC<CostBreakdownProps> = ({ estimate, filename }) => 
           Download Quote PDF
         </Button>
       </Box>
+
+      <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
+        <Grid item xs={12} sm={4}>
+          <Paper sx={{ p: 1.5, boxShadow: 'none', border: '1px solid #e7edf5' }}>
+            <Typography variant="caption" color="text.secondary">Material</Typography>
+            <Typography variant="subtitle1" fontWeight={700}>
+              {estimate.breakdown.material_weight_grams.toFixed(2)} g
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <Paper sx={{ p: 1.5, boxShadow: 'none', border: '1px solid #e7edf5' }}>
+            <Typography variant="caption" color="text.secondary">Print Time</Typography>
+            <Typography variant="subtitle1" fontWeight={700}>
+              {estimate.breakdown.print_time_hours.toFixed(2)} h
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <Paper sx={{ p: 1.5, boxShadow: 'none', border: '1px solid #e7edf5' }}>
+            <Typography variant="caption" color="text.secondary">Layers</Typography>
+            <Typography variant="subtitle1" fontWeight={700}>
+              {estimate.breakdown.layer_count}
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
 
       <Table>
         <TableBody>
@@ -310,25 +326,16 @@ const CostBreakdown: React.FC<CostBreakdownProps> = ({ estimate, filename }) => 
               <Typography variant="h6"><strong>Total Cost</strong></Typography>
             </TableCell>
             <TableCell align="right">
-              <Typography variant="h6"><strong>₹{estimate.total_cost.toFixed(2)}</strong></Typography>
+              <Typography variant="h6" color="primary.main"><strong>₹{estimate.total_cost.toFixed(2)}</strong></Typography>
             </TableCell>
           </TableRow>
         </TableBody>
       </Table>
 
       <Divider sx={{ my: 2 }} />
-
-      <Box>
-        <Typography variant="body2" color="text.secondary">
-          <strong>Material Weight:</strong> {estimate.breakdown.material_weight_grams.toFixed(2)} g
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          <strong>Print Time:</strong> {estimate.breakdown.print_time_hours.toFixed(2)} hours
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          <strong>Layers:</strong> {estimate.breakdown.layer_count}
-        </Typography>
-      </Box>
+      <Typography variant="caption" color="text.secondary">
+        Quote currency: {estimate.currency}. Generated from finalized slicing metrics.
+      </Typography>
     </Paper>
   );
 };

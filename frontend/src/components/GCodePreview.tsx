@@ -254,8 +254,11 @@ const GCodePreview: React.FC<GCodePreviewProps> = ({ gcodeUrl }) => {
 
   return (
     <Box>
-      <Paper sx={{ p: 2, mb: 2 }}>
+      <Paper sx={{ p: { xs: 2, md: 2.5 }, mb: 2 }}>
         <Typography variant="h6" gutterBottom>G-code Preview</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          Scrub through generated layers or animate toolpath playback.
+        </Typography>
         {loading ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <CircularProgress size={18} />
@@ -282,20 +285,33 @@ const GCodePreview: React.FC<GCodePreviewProps> = ({ gcodeUrl }) => {
                 {playing ? 'Pause' : 'Play'}
               </Button>
               <Button onClick={() => { setPlaying(false); setCurrentLayer(0); }}>Reset</Button>
-              <Button onClick={() => setCurrentLayer(totalLayers - 1)} disabled={totalLayers === 0}>All</Button>
+              <Button onClick={() => setCurrentLayer(totalLayers - 1)} disabled={totalLayers === 0}>All layers</Button>
               {[1, 2, 5].map(s => (
-                <Button key={s} variant={speed === s ? 'contained' : 'outlined'}
-                  onClick={() => setSpeed(s)}>{s}x</Button>
+                <Button
+                  key={s}
+                  variant={speed === s ? 'contained' : 'outlined'}
+                  onClick={() => setSpeed(s)}
+                >
+                  {s}x
+                </Button>
               ))}
             </ButtonGroup>
           </>
         )}
       </Paper>
-      <Box ref={containerRef} sx={{
-        width: '100%', height: '500px',
-        border: '1px solid', borderColor: 'divider',
-        borderRadius: 1, overflow: 'hidden', bgcolor: '#1a1a1a',
-      }} />
+      <Box
+        ref={containerRef}
+        sx={{
+          width: '100%',
+          height: '500px',
+          border: '1px solid',
+          borderColor: '#22314a',
+          borderRadius: 2,
+          overflow: 'hidden',
+          bgcolor: '#0f1624',
+          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.04)',
+        }}
+      />
     </Box>
   );
 };

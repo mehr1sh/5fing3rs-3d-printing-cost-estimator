@@ -136,6 +136,7 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
         // Default: rotate 180° around X and Y axes (fixes most common issues)
         mesh.rotation.x = Math.PI / 2; // 180° around X (fixes upside-down)
         mesh.rotation.y = Math.PI; // 180° around Y (fixes backwards)
+
         // If this doesn't work, try:
         // mesh.rotation.x = 0; mesh.rotation.y = 0; // No rotation
         // mesh.rotation.x = Math.PI; mesh.rotation.y = 0; // Only X rotation
@@ -193,7 +194,7 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
       },
       undefined,
       (err) => {
-        setError('Failed to load model: ' + err);
+        setError('Failed to load model: ' + err); // capture load errors
         setLoading(false);
       }
     );
@@ -215,7 +216,7 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
     };
     window.addEventListener('resize', handleResize);
 
-    return () => {
+    return () => { // cleanup on model change, cancel animatin frame, etc.
       window.removeEventListener('resize', handleResize);
       if (animationId !== null) {
         cancelAnimationFrame(animationId);
@@ -289,7 +290,7 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
     }
   }, [transform, lockToGrid]);
 
-  const resetView = () => {
+  const resetView = () => { //helper functions 
     if (controlsRef.current && cameraRef.current && meshRef.current) {
       const box = new THREE.Box3().setFromObject(meshRef.current);
       const center = box.getCenter(new THREE.Vector3());
