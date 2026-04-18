@@ -18,7 +18,8 @@ def create_admin_user(db: Session, username: str = "admin", password: str = "adm
         username=username,
         password_hash=hashed_password,
         email=email,
-        role="admin"
+        role="admin",
+        is_verified=True
     )
     
     db.add(admin_user)
