@@ -20,6 +20,8 @@ export interface Job {
   created_at: string;
   updated_at?: string;
   slicing_result?: SlicingResult;
+  failure_reason?: string;
+  failure_type?: string;
 }
 
 export interface SlicingResult {

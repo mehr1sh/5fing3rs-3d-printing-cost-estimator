@@ -9,6 +9,7 @@ import {
   Tab,
   Tabs,
   Alert,
+  Stack,
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -24,7 +25,6 @@ const Home: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { login, register, verifyOtp } = useAuth();
   const navigate = useNavigate();
-
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,139 +75,131 @@ const Home: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
-          3D Printing Cost Estimation Platform
-        </Typography>
-        <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>
-          Five Fingers Innovative Solutions
-        </Typography>
-        <Button
-          fullWidth
-          variant="outlined"
-          size="small"
-          sx={{ mb: 3 }}
-          onClick={() => navigate('/viewer')}
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', py: 4 }}>
+      <Container maxWidth="sm">
+        <Paper
+          sx={{
+            p: { xs: 3, md: 4 },
+            borderRadius: 3,
+            background: 'linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)',
+            border: '1px solid #e4ebf4',
+            animation: 'slideInUp 0.45s ease-out',
+          }}
         >
-          Try 3D Viewer (no login required)
-        </Button>
+          <Stack spacing={2.5}>
+            <Box>
+              <Typography variant="h5" component="h1" sx={{ mb: 0.5 }}>
+                Welcome Back
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Sign in to manage models, slicing workflows, and cost estimates.
+              </Typography>
+            </Box>
 
-        {!otpMode && (
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-            <Tabs value={tab} onChange={(_, v) => { setTab(v); setError(''); }}>
-              <Tab label="Login" />
-              <Tab label="Register" />
-            </Tabs>
-          </Box>
-        )}
+            <Button
+              fullWidth
+              variant="outlined"
+              sx={{ textTransform: 'none', fontWeight: 600 }}
+              onClick={() => navigate('/viewer')}
+            >
+              Open Public 3D Viewer
+            </Button>
 
-        {error && (
-          <Alert severity={error.includes('successful') || error.includes('Please enter') ? 'info' : 'error'} sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
+            {!otpMode && (
+              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Tabs value={tab} onChange={(_, v) => { setTab(v); setError(''); }} variant="fullWidth">
+                  <Tab label="Login" />
+                  <Tab label="Register" />
+                </Tabs>
+              </Box>
+            )}
 
-        {otpMode ? (
-          <form onSubmit={handleVerifyOtp}>
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              A 6-digit verification code has been sent to your email.
-            </Typography>
-            <TextField
-              fullWidth
-              label="Verification Code (6 digits)"
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value)}
-              margin="normal"
-              required
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
-            >
-              Verify & Login
-            </Button>
-            <Button
-              fullWidth
-              variant="text"
-              onClick={() => { setOtpMode(false); setError(''); }}
-            >
-              Back to Login
-            </Button>
-          </form>
-        ) : tab === 0 ? (
-          <form onSubmit={handleLogin}>
-            <TextField
-              fullWidth
-              label="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              margin="normal"
-              required
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
-            >
-              Login
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleRegister}>
-            <TextField
-              fullWidth
-              label="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              margin="normal"
-              required
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
-            >
-              Register
-            </Button>
-          </form>
-        )}
-      </Paper>
-    </Container>
+            {error && (
+              <Alert severity={error.includes('successful') || error.includes('Please enter') ? 'info' : 'error'}>
+                {error}
+              </Alert>
+            )}
+
+            {otpMode ? (
+              <form onSubmit={handleVerifyOtp}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  A 6-digit verification code has been sent to your email address.
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Verification Code"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  margin="normal"
+                  required
+                />
+                <Button type="submit" fullWidth variant="contained" sx={{ mt: 2, mb: 1.5, textTransform: 'none', fontWeight: 700 }} disabled={loading}>
+                  Verify and Continue
+                </Button>
+                <Button fullWidth variant="text" sx={{ textTransform: 'none', fontWeight: 600 }} onClick={() => { setOtpMode(false); setError(''); }}>
+                  Back to login
+                </Button>
+              </form>
+            ) : tab === 0 ? (
+              <form onSubmit={handleLogin}>
+                <TextField
+                  fullWidth
+                  label="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  margin="normal"
+                  required
+                />
+                <TextField
+                  fullWidth
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  margin="normal"
+                  required
+                />
+                <Button type="submit" fullWidth variant="contained" sx={{ mt: 2, mb: 1.5, textTransform: 'none', fontWeight: 700 }} disabled={loading}>
+                  Sign in
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handleRegister}>
+                <TextField
+                  fullWidth
+                  label="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  margin="normal"
+                  required
+                />
+                <TextField
+                  fullWidth
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  margin="normal"
+                  required
+                />
+                <TextField
+                  fullWidth
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  margin="normal"
+                  required
+                />
+                <Button type="submit" fullWidth variant="contained" sx={{ mt: 2, mb: 1.5, textTransform: 'none', fontWeight: 700 }} disabled={loading}>
+                  Create account
+                </Button>
+              </form>
+            )}
+          </Stack>
+        </Paper>
+      </Container>
+    </Box>
   );
 };
 
