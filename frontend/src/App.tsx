@@ -9,6 +9,7 @@ import JobDetail from './pages/JobDetail';
 import AdminMaterials from './pages/AdminMaterials';
 import AdminConfig from './pages/AdminConfig';
 import AdminLogs from './pages/AdminLogs';
+import AdminDashboard from './pages/AdminDashboard';
 
 const theme = createTheme({
   palette: {
@@ -87,22 +88,27 @@ const theme = createTheme({
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  
+
   if (loading) {
     return <div>Loading...</div>;
   }
-  
+
   return isAuthenticated ? <>{children}</> : <Navigate to="/" />;
 };
 
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAdmin, loading } = useAuth();
-  
+
   if (loading) {
     return <div>Loading...</div>;
   }
-  
+
   return isAdmin ? <>{children}</> : <Navigate to="/dashboard" />;
+};
+
+const DashboardRedirect: React.FC = () => {
+  const { isAdmin } = useAuth();
+  return isAdmin ? <Navigate to="/admin/dashboard" /> : <Dashboard />;
 };
 
 function AppRoutes() {
@@ -116,8 +122,16 @@ function AppRoutes() {
         path="/dashboard"
         element={
           <PrivateRoute>
-            <Dashboard />
+            <DashboardRedirect />
           </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin/dashboard"
+        element={
+          <AdminRoute>
+            <AdminDashboard />
+          </AdminRoute>
         }
       />
       <Route

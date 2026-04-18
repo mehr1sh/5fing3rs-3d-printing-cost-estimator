@@ -27,9 +27,10 @@ const AdminConfig: React.FC = () => {
   const loadConfig = async () => {
     try {
       const data = await adminAPI.getConfig();
-      setConfig(data);
+      setConfig(data || {});
     } catch (err) {
       console.error('Failed to load config:', err);
+      setConfig({});
     } finally {
       setLoading(false);
     }
@@ -47,13 +48,13 @@ const AdminConfig: React.FC = () => {
 
   return (
     <Box>
-      <AppBar position="static">
+      <AppBar position="static" sx={{ bgcolor: 'white', color: 'text.primary', borderBottom: '1px solid #eee' }}>
         <Toolbar>
-          <Button color="inherit" onClick={() => navigate('/dashboard')}>
-            Dashboard
+          <Button onClick={() => navigate('/admin/dashboard')}>
+            ← Admin Dashboard
           </Button>
-          <Typography variant="h6" sx={{ flexGrow: 1, ml: 2 }}>
-            Configuration
+          <Typography variant="h6" sx={{ flexGrow: 1, ml: 2, fontWeight: 700 }}>
+            System Configuration
           </Typography>
           <Button color="inherit" onClick={logout}>
             Logout

@@ -165,7 +165,7 @@ const GCodePreview: React.FC<GCodePreviewProps> = ({ gcodeUrl }) => {
 
         for (const pts of tmpPoints) {
           for (let i = 0; i < pts.length; i += 3) {
-            pts[i]     -= offsetX;
+            pts[i] -= offsetX;
             pts[i + 1] -= offsetY;
             pts[i + 2] -= offsetZ;
           }

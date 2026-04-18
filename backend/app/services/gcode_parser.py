@@ -16,8 +16,9 @@ def parse_gcode(gcode_path: str) -> Dict:
         time_match = re.search(r';TIME:(\d+)', content, re.IGNORECASE)
         print_time_seconds = int(time_match.group(1)) if time_match else 0
         
-        # Calculate material usage from E (extrusion) values
-        material_volume_mm3 = calculate_material_volume(content)
+        # Calculate material usage breakdown
+        material_breakdown = calculate_material_breakdown(content)
+        material_volume_mm3 = sum(material_breakdown.values())
         
         # Extract all G1 commands for visualization
         g1_commands = extract_g1_commands(content)
@@ -26,34 +27,67 @@ def parse_gcode(gcode_path: str) -> Dict:
             "layer_count": layer_count,
             "print_time_seconds": print_time_seconds,
             "material_volume_mm3": material_volume_mm3,
+            "material_breakdown": material_breakdown,
             "g1_commands": g1_commands
         }
     except Exception as e:
         raise ValueError(f"Error parsing G-code: {str(e)}")
 
-def calculate_material_volume(content: str) -> float:
-    """Calculate material volume from E (extrusion) values."""
-    # Extract all E values from G1 commands
-    e_values = []
+def calculate_material_breakdown(content: str) -> Dict[str, float]:
+    """Calculate material volume breakdown by type (Support, Infill, Walls, etc.)."""
+    filament_diameter = 1.75  # mm (standard)
+    cross_section_area = 3.14159 * (filament_diameter / 2) ** 2
+    
+    breakdown = {
+        "SUPPORT": 0.0,
+        "WALL-OUTER": 0.0,
+        "WALL-INNER": 0.0,
+        "FILL": 0.0,
+        "SKIRT": 0.0,
+        "OTHER": 0.0
+    }
+    
+    current_type = "OTHER"
     last_e = 0.0
     
     for line in content.split('\n'):
-        if line.strip().startswith('G1'):
-            e_match = re.search(r'E([\d.]+)', line)
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Track CuraEngine type comments
+        if line.startswith(';TYPE:'):
+            current_type = line.replace(';TYPE:', '').strip().upper()
+            if current_type not in breakdown:
+                breakdown[current_type] = 0.0
+            continue
+        
+        # Track extrusion in G1/G0 commands
+        if line.startswith('G1') or line.startswith('G0'):
+            e_match = re.search(r'E([-?\d.]+)', line)
             if e_match:
                 e_value = float(e_match.group(1))
                 if e_value > last_e:
-                    e_values.append(e_value - last_e)
+                    diff = e_value - last_e
+                    breakdown[current_type] += diff * cross_section_area
                     last_e = e_value
-    
-    # Estimate volume (simplified - assumes 0.4mm nozzle, 0.2mm layer height)
-    # E value is typically in mm of filament
-    # Volume = π * (filament_diameter/2)^2 * E_length
-    filament_diameter = 1.75  # mm (standard)
-    total_e = sum(e_values)
-    volume_mm3 = 3.14159 * (filament_diameter / 2) ** 2 * total_e
-    
-    return volume_mm3
+                elif e_value < last_e:
+                    # Reset last_e to current e_value if it decreases (e.g. after a G92)
+                    # This ensures we don't count the decrease as extrusion but can resume correctly
+                    last_e = e_value
+        
+        # Track G92 axis resets
+        elif line.startswith('G92'):
+            e_match = re.search(r'E([-?\d.]+)', line)
+            if e_match:
+                last_e = float(e_match.group(1))
+
+    return breakdown
+
+def calculate_material_volume(content: str) -> float:
+    """Calculate total material volume."""
+    breakdown = calculate_material_breakdown(content)
+    return sum(breakdown.values())
 
 def extract_g1_commands(content: str) -> List[Dict]:
     """Extract G1 (linear move) commands for visualization."""

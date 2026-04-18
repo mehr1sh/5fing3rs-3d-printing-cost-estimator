@@ -42,9 +42,10 @@ const AdminMaterials: React.FC = () => {
   const loadMaterials = async () => {
     try {
       const data = await adminAPI.getMaterials();
-      setMaterials(data);
+      setMaterials(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load materials:', err);
+      setMaterials([]);
     }
   };
 
@@ -94,12 +95,12 @@ const AdminMaterials: React.FC = () => {
 
   return (
     <Box>
-      <AppBar position="static">
+      <AppBar position="static" sx={{ bgcolor: 'white', color: 'text.primary', borderBottom: '1px solid #eee' }}>
         <Toolbar>
-          <Button color="inherit" onClick={() => navigate('/dashboard')}>
-            Dashboard
+          <Button onClick={() => navigate('/admin/dashboard')}>
+            ← Admin Dashboard
           </Button>
-          <Typography variant="h6" sx={{ flexGrow: 1, ml: 2 }}>
+          <Typography variant="h6" sx={{ flexGrow: 1, ml: 2, fontWeight: 700 }}>
             Materials Management
           </Typography>
           <Button color="inherit" onClick={logout}>

@@ -39,9 +39,10 @@ const AdminLogs: React.FC = () => {
   const loadLogs = async () => {
     try {
       const data = await adminAPI.getLogs();
-      setLogs(data);
+      setLogs(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load logs:', err);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -49,12 +50,12 @@ const AdminLogs: React.FC = () => {
 
   return (
     <Box>
-      <AppBar position="static">
+      <AppBar position="static" sx={{ bgcolor: 'white', color: 'text.primary', borderBottom: '1px solid #eee' }}>
         <Toolbar>
-          <Button color="inherit" onClick={() => navigate('/dashboard')}>
-            Dashboard
+          <Button onClick={() => navigate('/admin/dashboard')}>
+            ← Admin Dashboard
           </Button>
-          <Typography variant="h6" sx={{ flexGrow: 1, ml: 2 }}>
+          <Typography variant="h6" sx={{ flexGrow: 1, ml: 2, fontWeight: 700 }}>
             Failure Logs
           </Typography>
           <Button color="inherit" onClick={logout}>

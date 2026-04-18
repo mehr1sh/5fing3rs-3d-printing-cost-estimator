@@ -6,9 +6,13 @@ import {
   Box, ButtonGroup, Button, Typography, Paper,
   Slider, TextField, Grid, Divider, FormControlLabel, Switch,
   Accordion, AccordionSummary, AccordionDetails, Stack, useMediaQuery,
+  IconButton, Tooltip
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
+import FullscreenRoundedIcon from '@mui/icons-material/FullscreenRounded';
+import FullscreenExitRoundedIcon from '@mui/icons-material/FullscreenExitRounded';
+import LayersRoundedIcon from '@mui/icons-material/LayersRounded';
 
 interface ModelViewer3DProps {
   modelUrl: string;
@@ -43,16 +47,21 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const meshRef = useRef<THREE.Mesh | null>(null);
+  const clippingPlaneRef = useRef<THREE.Plane>(new THREE.Plane(new THREE.Vector3(0, -1, 0), 0));
   const gridRef = useRef<THREE.GridHelper | null>(null);
   const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
   const dirLightRef = useRef<THREE.DirectionalLight | null>(null);
   const basePositionYRef = useRef(0);
+
   const [viewMode, setViewMode] = useState<ViewMode>('solid');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modelInfo, setModelInfo] = useState<any>(null);
   const [transform, setTransform] = useState<Transform>(DEFAULT_TRANSFORM);
   const [lockToGrid, setLockToGrid] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [clippingValue, setClippingValue] = useState(100); // 0-100 percentage
+  const [showClipping, setShowClipping] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -69,15 +78,16 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
       75,
       containerRef.current.clientWidth / containerRef.current.clientHeight,
       0.1,
-      1000
+      5000 // Increased far plane to avoid clipping large models
     );
-    camera.position.set(100, 100, 100);
+    camera.position.set(200, 200, 200);
     cameraRef.current = camera;
 
     // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
     renderer.shadowMap.enabled = true;
+    renderer.localClippingEnabled = true; // Enable local clipping
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -113,10 +123,20 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
     let animationId: number | null = null;
 
     // Load STL
+    console.log('Starting STL load from:', modelUrl);
     const loader = new STLLoader();
     loader.load(
       modelUrl,
       (geometry) => {
+        console.log('STL loaded successfully. Geometry:', geometry);
+
+        if (!geometry.attributes.position || geometry.attributes.position.count === 0) {
+          console.error('Loaded geometry is empty');
+          setError('The loaded 3D model appears to be empty.');
+          setLoading(false);
+          return;
+        }
+
         geometry.center();
         geometry.computeVertexNormals();
         currentGeometry = geometry;
@@ -126,6 +146,9 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
           flatShading: false,
           metalness: 0.1,
           roughness: 0.65,
+          clippingPlanes: [clippingPlaneRef.current],
+          clipShadows: true,
+          side: THREE.DoubleSide,
         });
         currentMaterial = material;
 
@@ -133,44 +156,33 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
         mesh.castShadow = true;
         mesh.receiveShadow = true;
 
-        // Fix orientation - STL files often need rotation correction
-        // Try different combinations based on your model orientation:
-        // Common fixes:
-        // - Upside down: rotate X by 180° (Math.PI)
-        // - Backwards: rotate Y by 180° (Math.PI)  
-        // - Sideways: rotate Z by 90° (Math.PI/2)
-        // - Combination: rotate X and Y by 180° each
-
-        // Default: rotate 180° around X and Y axes (fixes most common issues)
-        mesh.rotation.x = Math.PI / 2; // 180° around X (fixes upside-down)
-        mesh.rotation.y = Math.PI; // 180° around Y (fixes backwards)
-
-        // If this doesn't work, try:
-        // mesh.rotation.x = 0; mesh.rotation.y = 0; // No rotation
-        // mesh.rotation.x = Math.PI; mesh.rotation.y = 0; // Only X rotation
-        // mesh.rotation.x = 0; mesh.rotation.y = Math.PI; // Only Y rotation
-        // mesh.rotation.z = Math.PI / 2; // 90° Z rotation for sideways
+        // Fix orientation - Most STLs are Z-up, Three.js is Y-up
+        mesh.rotation.x = -Math.PI / 2;
 
         scene.add(mesh);
         meshRef.current = mesh;
 
         // Step 1: Get bounding box BEFORE any position adjustment
         const box = new THREE.Box3().setFromObject(mesh);
+        console.log('Model Bounding Box:', box);
 
-        // Step 2: Center the mesh on X and Z axes (so it sits at origin horizontally)
+        // Step 2: Center the mesh on X and Z axes
         const centerXZ = box.getCenter(new THREE.Vector3());
         mesh.position.x -= centerXZ.x;
         mesh.position.z -= centerXZ.z;
 
         // Step 3: Lift mesh so its bottom sits on the grid (y=0)
+        box.setFromObject(mesh); // Update box after XZ shift
         mesh.position.y -= box.min.y;
         basePositionYRef.current = mesh.position.y;
+
         setTransform(DEFAULT_TRANSFORM);
 
-        // Step 4: Recalculate bounding box AFTER repositioning
+        // Step 4: Recalculate final stats
         box.setFromObject(mesh);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
+        console.log('Final Size:', size, 'Center:', center);
 
         setModelInfo({
           dimensions: {
@@ -186,23 +198,33 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
           triangleCount: geometry.attributes.position.count / 3,
         });
 
-        // Step 5: Point camera at the true center of the repositioned model
-        // Use a diagonal offset based on model size so the whole model is visible
+        // Step 5: Point camera at the model
         const maxDim = Math.max(size.x, size.y, size.z);
+        const cameraDistance = maxDim * 2.5;
+
         controls.target.copy(center);
         camera.position.set(
-          center.x + maxDim * 1.5,
-          center.y + maxDim * 1.5,
-          center.z + maxDim * 1.5
+          center.x + cameraDistance,
+          center.y + cameraDistance,
+          center.z + cameraDistance
         );
         camera.lookAt(center);
         controls.update();
 
+        // Initialize clipping plane to top of model
+        clippingPlaneRef.current.constant = size.y;
+
         setLoading(false);
       },
-      undefined,
+      (xhr) => {
+        if (xhr.lengthComputable) {
+          const percentComplete = (xhr.loaded / xhr.total) * 100;
+          console.log(`STL loading progress: ${Math.round(percentComplete)}%`);
+        }
+      },
       (err) => {
-        setError('Failed to load model: ' + err); // capture load errors
+        console.error('STLLoader error:', err);
+        setError('Failed to display 3D model. Please try refreshing or re-uploading.');
         setLoading(false);
       }
     );
@@ -224,8 +246,16 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
     };
     window.addEventListener('resize', handleResize);
 
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+      // Force resize on fullscreen change
+      setTimeout(handleResize, 100);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
     return () => { // cleanup on model change, cancel animatin frame, etc.
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
       if (animationId !== null) {
         cancelAnimationFrame(animationId);
       }
@@ -256,18 +286,21 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
         material.wireframe = false;
         material.transparent = false;
         material.opacity = 1.0;
+        setShowClipping(false);
         break;
       case 'wireframe':
         material.color.set(0x1976d2);
         material.wireframe = true;
         material.transparent = false;
         material.opacity = 1.0;
+        setShowClipping(false);
         break;
       case 'layer':
         material.color.set(0x1f7a6b);
         material.wireframe = false;
         material.transparent = true;
         material.opacity = 0.82;
+        setShowClipping(true);
         break;
     }
   }, [viewMode]);
@@ -277,8 +310,8 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
     if (!meshRef.current) return;
     const mesh = meshRef.current;
     mesh.position.set(transform.posX, basePositionYRef.current + transform.posY, transform.posZ);
-    mesh.rotation.x = THREE.MathUtils.degToRad(transform.rotX) + Math.PI / 2;
-    mesh.rotation.y = THREE.MathUtils.degToRad(transform.rotY) + Math.PI;
+    mesh.rotation.x = THREE.MathUtils.degToRad(transform.rotX) - Math.PI / 2;
+    mesh.rotation.y = THREE.MathUtils.degToRad(transform.rotY);
     mesh.rotation.z = THREE.MathUtils.degToRad(transform.rotZ);
     mesh.scale.setScalar(transform.scale);
     if (lockToGrid) {
@@ -286,6 +319,27 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
       if (box.min.y < 0) mesh.position.y -= box.min.y;
     }
   }, [transform, lockToGrid]);
+
+  // Update clipping plane position
+  useEffect(() => {
+    if (!modelInfo || !showClipping) {
+      clippingPlaneRef.current.constant = 10000; // Move far away if disabled
+      return;
+    }
+    const height = parseFloat(modelInfo.dimensions.y);
+    clippingPlaneRef.current.constant = (height * (clippingValue / 100));
+  }, [clippingValue, modelInfo, showClipping]);
+
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   const resetView = () => { //helper functions 
     if (controlsRef.current && cameraRef.current && meshRef.current) {
@@ -296,9 +350,9 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
 
       controlsRef.current.target.copy(center);
       cameraRef.current.position.set(
-        center.x + maxDim * 1.5,
-        center.y + maxDim * 1.5,
-        center.z + maxDim * 1.5
+        center.x + maxDim * 2.5,
+        center.y + maxDim * 2.5,
+        center.z + maxDim * 2.5
       );
       controlsRef.current.update();
     }
@@ -335,11 +389,11 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
       ref={containerRef}
       sx={{
         width: '100%',
-        height: { xs: 380, sm: 460, md: 560 },
-        borderRadius: 2,
+        height: isFullscreen ? '100vh' : { xs: 380, sm: 460, md: 560 },
+        borderRadius: isFullscreen ? 0 : 2,
         overflow: 'hidden',
         position: 'relative',
-        border: '1px solid',
+        border: isFullscreen ? 'none' : '1px solid',
         borderColor: '#dfe7f2',
         background: 'linear-gradient(180deg, #fbfdff 0%, #f1f6fc 100%)',
       }}
@@ -362,7 +416,24 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
           </Paper>
         </Box>
       )}
-      <Box sx={{ position: 'absolute', right: 14, bottom: 14, zIndex: 1 }}>
+
+      {/* Viewer Overlay Controls */}
+      <Box sx={{ position: 'absolute', top: 14, right: 14, zIndex: 5, display: 'flex', gap: 1 }}>
+        <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
+          <IconButton
+            onClick={toggleFullscreen}
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.9)',
+              '&:hover': { bgcolor: '#fff' },
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}
+          >
+            {isFullscreen ? <FullscreenExitRoundedIcon /> : <FullscreenRoundedIcon />}
+          </IconButton>
+        </Tooltip>
+      </Box>
+
+      <Box sx={{ position: 'absolute', left: 14, bottom: 14, zIndex: 1 }}>
         <Paper sx={{ px: 1.5, py: 0.75, borderRadius: 999, bgcolor: 'rgba(255,255,255,0.92)', boxShadow: 'none', border: '1px solid #e6ebf1' }}>
           <Typography variant="caption" sx={{ color: '#526071', fontWeight: 600 }}>
             Drag to orbit · Scroll to zoom
@@ -382,9 +453,39 @@ const ModelViewer3D: React.FC<ModelViewer3DProps> = ({ modelUrl, jobId: _jobId }
       }}
     >
       <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.25 }}>
-        Transform
+        Tools & Transform
       </Typography>
       <Divider sx={{ mb: 1.25 }} />
+
+      {/* Layer Selection Section */}
+      <Box sx={{ mb: 2 }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+          <LayersRoundedIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+          <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Layer Clipping
+          </Typography>
+        </Stack>
+        <FormControlLabel
+          control={<Switch size="small" checked={showClipping} onChange={(e) => setShowClipping(e.target.checked)} />}
+          label={<Typography variant="caption">Enable layer view</Typography>}
+          sx={{ mb: 1 }}
+        />
+        <Box sx={{ px: 1 }}>
+          <Typography variant="caption" color="text.secondary">Current Height (%)</Typography>
+          <Slider
+            disabled={!showClipping}
+            value={clippingValue}
+            onChange={(_, v) => setClippingValue(v as number)}
+            min={0}
+            max={100}
+            size="small"
+            valueLabelDisplay="auto"
+          />
+        </Box>
+      </Box>
+
+      <Divider sx={{ my: 1.5 }} />
+
       <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: 'text.secondary' }}>Position</Typography>
       {renderTransformRow('X', 'posX', -100, 100, 0.5)}
       {renderTransformRow('Y', 'posY', -100, 100, 0.5)}

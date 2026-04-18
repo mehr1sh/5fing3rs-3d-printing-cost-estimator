@@ -15,6 +15,7 @@ import {
   Stack,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ErrorIcon from '@mui/icons-material/Error';
 import { useAuth } from '../context/AuthContext';
 import ModelViewer3D from '../components/ModelViewer3D';
 import SlicingParamsForm from '../components/SlicingParamsForm';
@@ -96,7 +97,7 @@ const JobDetail: React.FC = () => {
           } else if (updatedJob.status === 'failed') {
             clearInterval(pollInterval);
             setSlicing(false);
-            setError('Slicing failed. Please check the logs.');
+            setError(updatedJob.failure_reason || 'Slicing failed. Please check the logs.');
           }
         } catch (err) {
           clearInterval(pollInterval);
@@ -260,11 +261,26 @@ const JobDetail: React.FC = () => {
             </Grid>
           )}
 
-          {job.status === 'slicing' && (
+          {job.status === 'failed' && (
             <Grid item xs={12} sx={{ animation: 'slideInUp 0.6s ease-out' }}>
-              <Paper sx={{ p: { xs: 2.5, sm: 3 }, textAlign: 'center', background: 'linear-gradient(135deg, #f0f7ff 0%, #f5f9fe 100%)' }}>
-                <CircularProgress sx={{ mb: 2 }} />
-                <Typography sx={{ fontWeight: 500 }}>Slicing in progress...</Typography>
+              <Paper sx={{ p: 3, borderLeft: '6px solid #d32f2f', bgcolor: '#fff5f5' }}>
+                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                  <ErrorIcon sx={{ color: '#d32f2f' }} />
+                  <Typography variant="h6" color="error" sx={{ fontWeight: 700 }}>
+                    Processing Failed
+                  </Typography>
+                </Stack>
+                <Typography variant="body1" sx={{ mb: 2, color: '#5f6b7a' }}>
+                  {job.failure_reason || 'An unexpected error occurred during slicing. This can happen if the model has complex geometry or if the server timed out.'}
+                </Typography>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => setJob({ ...job, status: 'uploaded' })}
+                  sx={{ textTransform: 'none', fontWeight: 600 }}
+                >
+                  Edit Settings & Retry
+                </Button>
               </Paper>
             </Grid>
           )}

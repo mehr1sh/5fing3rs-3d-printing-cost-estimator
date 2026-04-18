@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+import os
 from sqlalchemy.orm import Session
 from typing import List
 from app.database.database import get_db
@@ -165,3 +166,59 @@ async def get_failure_logs(
         }
         for log in logs
     ]
+
+# Dashboard Stats
+@router.get("/stats")
+async def get_stats(
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin)
+):
+    """Get system-wide statistics."""
+    from app.models.user import User
+    from app.models.job import Job
+    from app.models.failure_log import FailureLog
+    
+    total_users = db.query(User).count()
+    total_jobs = db.query(Job).count()
+    failed_jobs = db.query(FailureLog).count()
+    running_jobs = db.query(Job).filter(Job.status.in_(["uploaded", "slicing"])).count()
+    
+    return {
+        "total_users": total_users,
+        "total_jobs": total_jobs,
+        "failed_jobs": failed_jobs,
+        "running_jobs": running_jobs
+    }
+
+# All Jobs
+@router.get("/all-jobs")
+async def get_all_jobs(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin)
+):
+    """Get all jobs in the system."""
+    from app.models.job import Job
+    jobs = db.query(Job).order_by(Job.created_at.desc()).offset(skip).limit(limit).all()
+    return jobs
+
+# System Logs
+@router.get("/system-logs")
+async def get_system_logs(
+    lines: int = 100,
+    admin: User = Depends(require_admin)
+):
+    """Read the latest application logs."""
+    log_file = "/app/logs/app.log"
+    if not os.path.exists(log_file):
+        return {"logs": "Log file not found."}
+    
+    try:
+        with open(log_file, "r") as f:
+            content = f.readlines()
+            # Return last N lines
+            last_lines = content[-lines:] if len(content) > lines else content
+            return {"logs": "".join(last_lines)}
+    except Exception as e:
+        return {"logs": f"Error reading logs: {str(e)}"}

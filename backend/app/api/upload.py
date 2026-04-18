@@ -138,6 +138,13 @@ async def get_job(
             "created_at": slicing_result.created_at
         }
     
+    # Include failure reason if job failed
+    if job.status == "failed":
+        failure = db.query(FailureLog).filter(FailureLog.job_id == job_id).order_by(FailureLog.created_at.desc()).first()
+        if failure:
+            result["failure_reason"] = failure.error_message
+            result["failure_type"] = failure.error_type
+    
     return result
 
 @router.get("/files/{job_id}/model.stl")

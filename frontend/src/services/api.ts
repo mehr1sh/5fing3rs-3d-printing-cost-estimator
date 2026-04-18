@@ -141,6 +141,18 @@ export const adminAPI = {
     const response = await api.get('/api/admin/logs', { params: { skip, limit } });
     return response.data;
   },
+  getStats: async (): Promise<any> => {
+    const response = await api.get('/api/admin/stats');
+    return response.data;
+  },
+  getAllJobs: async (skip = 0, limit = 50): Promise<Job[]> => {
+    const response = await api.get('/api/admin/all-jobs', { params: { skip, limit } });
+    return response.data;
+  },
+  getSystemLogs: async (lines = 100): Promise<{ logs: string }> => {
+    const response = await api.get('/api/admin/system-logs', { params: { lines } });
+    return response.data;
+  },
 };
 
 export default api;

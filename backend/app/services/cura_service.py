@@ -103,9 +103,13 @@ def execute_cura_slicing(
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=SLICING_TIMEOUT)
     except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"CuraEngine failed: {e.stderr}")
+        # Check for common CuraEngine failure patterns in stderr
+        error_msg = e.stderr or "Unknown error"
+        if "Empty model" in error_msg:
+            raise ValueError("The STL file appears to be empty or invalid (no geometry).")
+        raise RuntimeError(f"CuraEngine failed: {error_msg}")
     except subprocess.TimeoutExpired:
-        raise RuntimeError(f"Slicing timed out after {SLICING_TIMEOUT} seconds")
+        raise TimeoutError(f"Slicing timed out after {SLICING_TIMEOUT} seconds. The model might be too complex.")
 
     print_time_seconds = 0
     layer_count = 0
