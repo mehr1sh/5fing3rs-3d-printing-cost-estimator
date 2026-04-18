@@ -15,7 +15,3 @@ docker exec -it final_c-postgres-1 psql -U printuser -d printing_platform -c "SE
 
 To seed data if calculate cost fails - run seed_data.py
 docker exec -it final_c-backend-1 python seed_data.py
-
-run backend logs
-docker compose logs -f backend
-

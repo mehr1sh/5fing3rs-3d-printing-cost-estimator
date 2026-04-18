@@ -27,19 +27,23 @@ cp .env.example .env
 *(If `.env.example` doesn't exist, just create a `.env` file containing `JWT_SECRET_KEY=supersecretkey123`)*
 
 ### 3. Build and Start the Application
-Use Docker Compose to build and run the backend, frontend, and database containers:
+Use Docker Compose V2 to build and run the services:
 ```bash
-# If using older docker-compose:
-docker-compose up --build -d
-
-# If using modern docker compose:
-docker compose up --build -d
+docker compose up -d --build
 ```
-*Note: The first build will take a few minutes as it downloads the Python images and installs dependencies (like `trimesh` and `numpy`).*
+*Note: The first build will take a few minutes as it downloads dependencies and the CuraEngine binary.*
 
-### 4. Access the Application
-Once the containers are running:
-- **Frontend Dashboard:** [http://localhost:5173](http://localhost:5173)
+### 4. Initialize Database
+Run these commands to set up your tables and initial data:
+```bash
+docker exec backend python -m app.create_tables
+docker exec backend python -m app.seed_data
+docker exec backend python -m app.create_admin
+```
+
+### 5. Access the Application
+Once initialized:
+- **Frontend Dashboard:** [http://localhost:3001](http://localhost:3001)
 - **Backend API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---

@@ -49,13 +49,13 @@ cp backend/.env.example backend/.env
 
 3. Start all services:
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 4. Initialize database:
 ```bash
-# Apply migrations
-docker exec backend alembic upgrade head
+# Create tables
+docker exec backend python -m app.create_tables
 
 # Seed initial data
 docker exec backend python -m app.seed_data
@@ -65,10 +65,22 @@ docker exec backend python -m app.create_admin
 ```
 
 5. Access the application:
-- Frontend: http://localhost:3000
+- Frontend: http://localhost:3001
 - Backend API: http://localhost:8000
 - API Documentation: http://localhost:8000/docs
-- PostgreSQL: localhost:5432
+- PostgreSQL: localhost:5433
+
+## Shutting Down
+
+To stop the services while keeping the data:
+```bash
+docker compose stop
+```
+
+To stop and remove containers (data in volumes persists):
+```bash
+docker compose down
+```
 
 ## Default Credentials
 
