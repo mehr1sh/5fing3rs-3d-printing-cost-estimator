@@ -41,6 +41,23 @@ async def process_slicing(
         if not file_exists(get_file_path(job_id, job.filename)):
             raise FileNotFoundError("Model file not found")
         
+        # Early Validation: Check Build Volume
+        from app.utils.validators import extract_stl_bounds
+        bounds, bounds_error = extract_stl_bounds(stl_path)
+        
+        if bounds_error:
+            raise ValueError(f"STL Validation Failed: {bounds_error}")
+            
+        # Get printer limits from config
+        from app.models.admin_config import AdminConfig
+        config_dict = {c.key: c.value for c in db.query(AdminConfig).all()}
+        max_x = float(config_dict.get("printer_volume_x", 250))
+        max_y = float(config_dict.get("printer_volume_y", 250))
+        max_z = float(config_dict.get("printer_volume_z", 250))
+        
+        if bounds["size_x"] > max_x or bounds["size_y"] > max_y or bounds["size_z"] > max_z:
+            raise ValueError(f"Model too large for build volume ({max_x}x{max_y}x{max_z}mm). Model size: {bounds['size_x']:.1f}x{bounds['size_y']:.1f}x{bounds['size_z']:.1f}mm")
+
         # Execute slicing
         result = execute_cura_slicing(stl_path, gcode_path, params)
         
@@ -58,12 +75,12 @@ async def process_slicing(
         else:
             material_weight_grams = (material_volume_mm3 / 1000) * 1.24  # Default PLA density
         
-        # Estimate support material (10% of model volume if enabled)
-        support_material_grams = 0.0
-        if params.supportEnabled:
-            support_volume_mm3 = material_volume_mm3 * 0.1
-            if material:
-                support_material_grams = (support_volume_mm3 / 1000) * material.density_g_cm3
+        # Accurate support material calculation from G-code breakdown
+        material_breakdown = gcode_stats.get("material_breakdown", {})
+        support_volume_mm3 = material_breakdown.get("SUPPORT", 0.0)
+        
+        density = material.density_g_cm3 if material else 1.24  # Default PLA density
+        support_material_grams = (support_volume_mm3 / 1000) * density
         
         # Create slicing result
         slicing_result = SlicingResult(
@@ -92,6 +109,27 @@ async def process_slicing(
                 except Exception as email_err:
                     print(f"Email notification failed (non-fatal): {email_err}")
     
+    except ValueError as e:
+        job.status = "failed"
+        db.commit()
+        
+        failure_log = FailureLog(
+            job_id=job_id,
+            error_type="validation_error",
+            error_message=str(e),
+            stack_trace=None
+        )
+        db.add(failure_log)
+        db.commit()
+        
+        if job.user_id:
+            user = db.query(User).filter(User.id == job.user_id).first()
+            if user and user.email:
+                try:
+                    await send_slicing_failed_email(job, str(e), user.email)
+                except Exception as email_err:
+                    print(f"Email notification failed (non-fatal): {email_err}")
+
     except TimeoutError as e:
         job.status = "failed"
         db.commit()

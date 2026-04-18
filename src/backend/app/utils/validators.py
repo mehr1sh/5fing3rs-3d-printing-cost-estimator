@@ -70,3 +70,62 @@ def validate_file_integrity(file_path: str, extension: str) -> Tuple[bool, Optio
     elif ext in [".step", ".stp"]:
         return validate_step_file(file_path)
     return False, "Unsupported file type for validation"
+
+def extract_stl_bounds(file_path: str) -> Tuple[Optional[dict], Optional[str]]:
+    """Extract min/max bounds from STL file.
+    
+    Returns:
+        tuple: (bounds_dict, error_message)
+        bounds_dict example: {"min_x": 0, "max_x": 10, ...}
+    """
+    import struct
+    try:
+        min_coords = [float('inf'), float('inf'), float('inf')]
+        max_coords = [float('-inf'), float('-inf'), float('-inf')]
+        
+        with open(file_path, 'rb') as f:
+            header = f.read(80)
+            if header.startswith(b'solid') and b'facet' in f.read(200):
+                # Probable ASCII STL
+                f.seek(0)
+                for line in f:
+                    line = line.decode('ascii', errors='ignore').strip().lower()
+                    if line.startswith('vertex'):
+                        parts = line.split()
+                        if len(parts) >= 4:
+                            for i in range(3):
+                                val = float(parts[i+1])
+                                if val < min_coords[i]: min_coords[i] = val
+                                if val > max_coords[i]: max_coords[i] = val
+            else:
+                # Binary STL
+                f.seek(80)
+                count_bytes = f.read(4)
+                if len(count_bytes) < 4:
+                    return None, "Truncated binary STL"
+                
+                num_triangles = struct.unpack('<I', count_bytes)[0]
+                # Each triangle is 50 bytes (normal[12] + v1[12] + v2[12] + v3[12] + attr[2])
+                for _ in range(num_triangles):
+                    data = f.read(50)
+                    if len(data) < 50:
+                        break
+                    # We only care about vertices (v1, v2, v3) which start at offset 12
+                    # Each vertex is 3 floats (12 bytes)
+                    for v_idx in range(3):
+                        offset = 12 + (v_idx * 12)
+                        v_coords = struct.unpack('<3f', data[offset:offset+12])
+                        for i in range(3):
+                            if v_coords[i] < min_coords[i]: min_coords[i] = v_coords[i]
+                            if v_coords[i] > max_coords[i]: max_coords[i] = v_coords[i]
+                            
+        if min_coords[0] == float('inf'):
+            return None, "No geometry found in STL"
+            
+        return {
+            "min_x": min_coords[0], "max_x": max_coords[0], "size_x": max_coords[0] - min_coords[0],
+            "min_y": min_coords[1], "max_y": max_coords[1], "size_y": max_coords[1] - min_coords[1],
+            "min_z": min_coords[2], "max_z": max_coords[2], "size_z": max_coords[2] - min_coords[2],
+        }, None
+    except Exception as e:
+        return None, f"Error parsing STL bounds: {str(e)}"

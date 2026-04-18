@@ -59,8 +59,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     if user is None:
         raise credentials_exception
     
-    # Do not allow unverified users to act as authenticated (unless they are admin)
-    if not user.is_verified and user.role != "admin":
+    # Do not allow unverified users to act as authenticated (unless explicitly bypassing for OTP route)
+    if not user.is_verified:
          raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email not verified",
@@ -169,7 +169,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
             headers={"WWW-Authenticate": "Bearer"},
         )
         
-    if not user.is_verified and user.role != "admin":
+    if not user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email not verified. Please check your email for the OTP code."
