@@ -36,9 +36,6 @@ yarn-error.log*
 uploads/
 gcode/
 *.gcode
-*.stl
-*.step
-*.stp
 
 # CuraEngine binary / source (large, not part of the project)
 cura-engine/
