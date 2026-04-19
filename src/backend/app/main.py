@@ -7,9 +7,9 @@ import logging
 import os
 
 # Configure logging
-LOG_DIR = "/app/logs"
+LOG_DIR = os.getenv("LOG_DIR", "./logs")
 if not os.path.exists(LOG_DIR):
-    os.makedirs(LOG_DIR)
+    os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,8 +21,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+# Create database tables (only if not in test mode)
+if os.getenv("TESTING") != "true":
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="3D Printing Cost Estimation Platform",

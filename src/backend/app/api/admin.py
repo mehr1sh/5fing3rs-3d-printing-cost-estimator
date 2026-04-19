@@ -210,7 +210,8 @@ async def get_system_logs(
     admin: User = Depends(require_admin)
 ):
     """Read the latest application logs."""
-    log_file = "/app/logs/app.log"
+    log_dir = os.getenv("LOG_DIR", "./logs")
+    log_file = os.path.join(log_dir, "app.log")
     if not os.path.exists(log_file):
         return {"logs": "Log file not found."}
     
