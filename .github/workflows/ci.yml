@@ -9,8 +9,8 @@ on:
 jobs:
   # ---------------------------------------------------------------------------
   # Backend: unit + integration tests
-  # Uses SQLite (file-based, not :memory:) to match confest.py behaviour.
-  # JSONB → JSON patching is handled inside confest.py automatically.
+  # Uses SQLite (file-based, not :memory:) to match conftest.py behaviour.
+  # JSONB → JSON patching is handled inside conftest.py automatically.
   # ---------------------------------------------------------------------------
   backend-tests:
     name: Backend Tests (Python)
@@ -33,7 +33,15 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # confest.py creates test_run.db (SQLite file) automatically.
+      # confest.py is misnamed in the repo — pytest requires exactly "conftest.py"
+      # to auto-load fixtures. Rename it here so CI works without a repo change.
+      - name: Fix conftest filename (confest.py → conftest.py)
+        run: |
+          if [ -f tests/confest.py ] && [ ! -f tests/conftest.py ]; then
+            cp tests/confest.py tests/conftest.py
+          fi
+
+      # conftest.py creates test_run.db (SQLite file) automatically.
       # We only need the non-DB env vars here.
       - name: Create test .env
         run: |
@@ -53,16 +61,20 @@ jobs:
       # test_estimation.py only checks callable(calculate_cost) — also safe.
       - name: Run unit tests
         run: |
-          pytest tests/test_cost_validators.py tests/test_estimation.py \
+          pytest tests/test_cost_validators.py \
+                 tests/test_estimation.py \
             -v --tb=short \
             --junitxml=reports/unit-results.xml
 
-      # ── Integration tests (auth + upload + admin routes) ───────────────────
-      # These use the `client` fixture from confest.py which wires FastAPI
+      # ── Integration tests (auth + upload routes) ───────────────────────────
+      # These use the `client` fixture from conftest.py which wires FastAPI
       # to the SQLite test DB via dependency override.
-      # NOTE: test_auth.py uses a module-level TestClient (no fixture) so it
-      # will hit the real DATABASE_URL — keep it in this group so the .env
-      # above is present.
+      # NOTE: test_auth.py and test_upload.py use a module-level TestClient
+      # (no fixture) so they hit the real DATABASE_URL — keep them here so
+      # the .env above is present.
+      # NOTE: text_auth_extended.py and text_upload_extended.py are named with
+      # "text_" prefix (not "test_") so pytest won't auto-discover them —
+      # they must be listed explicitly.
       - name: Run integration tests
         run: |
           pytest tests/test_auth.py \
