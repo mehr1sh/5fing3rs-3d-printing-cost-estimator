@@ -15,6 +15,12 @@ RUN apt-get update && apt-get install -y \
     cmake \
     build-essential \
     git \
+    libgl1 \
+    libglib2.0-0 \
+    libglu1-mesa \
+    libxrender1 \
+    libxext6 \
+    libx11-6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install CuraEngine via apt

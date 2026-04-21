@@ -171,14 +171,15 @@ async def download_model(
             detail="Not authorized"
         )
     
-    file_path = get_file_path(job_id, job.filename)
-    
+    # Always serve model.stl (non-STL uploads are converted to it at upload time)
+    file_path = get_file_path(job_id, "model.stl")
+
     if not file_exists(file_path):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found"
         )
-    
+
     return FileResponse(
         path=str(file_path),
         filename=job.original_filename,

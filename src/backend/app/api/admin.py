@@ -202,7 +202,19 @@ async def get_all_jobs(
 ):
     """Get all jobs in the system."""
     jobs = db.query(Job).order_by(Job.created_at.desc()).offset(skip).limit(limit).all()
-    return jobs
+    return [
+        {
+            "job_id": job.job_id,
+            "filename": job.filename,
+            "original_filename": job.original_filename,
+            "status": job.status,
+            "file_size": job.file_size,
+            "created_at": job.created_at,
+            "updated_at": job.updated_at,
+            "processing_label": job.processing_label,
+        }
+        for job in jobs
+    ]
 
 # Update Job Label
 @router.put("/jobs/{job_id}/label", response_model=JobResponse)

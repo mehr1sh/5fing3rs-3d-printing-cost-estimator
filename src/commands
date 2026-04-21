@@ -7,7 +7,6 @@ docker logs final_c-backend-1
 to watch the live backend logs while ignoring the health checks
 docker logs -f backend 2>&1 | grep --line-buffered -v "/health"
 
-
 to view databae Postgres
 docker exec -it final_c-postgres-1 psql -U printuser -d printing_platform
 

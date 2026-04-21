@@ -24,6 +24,12 @@ logger = logging.getLogger(__name__)
 # Create database tables (only if not in test mode)
 if os.getenv("TESTING") != "true":
     Base.metadata.create_all(bind=engine)
+    # Run migrations for existing tables
+    from app.migrations.add_processing_label import migrate
+    try:
+        migrate()
+    except Exception as e:
+        logger.error(f"Error running migration: {e}")
 
 app = FastAPI(
     title="3D Printing Cost Estimation Platform",

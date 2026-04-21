@@ -3,7 +3,7 @@ import re
 from typing import Tuple, Optional
 from pathlib import Path
 
-ALLOWED_EXTENSIONS = {".stl", ".step", ".stp"}
+ALLOWED_EXTENSIONS = {".stl", ".step", ".stp", ".obj", ".3mf", ".ply"}
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
 def validate_file_extension(filename: str) -> bool:
@@ -62,13 +62,57 @@ def validate_step_file(file_path: str) -> Tuple[bool, Optional[str]]:
     except Exception as e:
         return False, f"Error validating STEP file: {str(e)}"
 
+def validate_obj_file(file_path: str) -> Tuple[bool, Optional[str]]:
+    """Validate OBJ file integrity."""
+    try:
+        with open(file_path, 'rb') as f:
+            content = f.read(512).decode('ascii', errors='ignore')
+            if any(line.startswith(('v ', 'vn ', 'vt ', 'f ', 'o ', 'g ', '#')) for line in content.splitlines()):
+                return True, None
+        return False, "Invalid OBJ file format"
+    except Exception as e:
+        return False, f"Error validating OBJ file: {str(e)}"
+
+
+def validate_3mf_file(file_path: str) -> Tuple[bool, Optional[str]]:
+    """Validate 3MF file integrity (3MF is a ZIP archive)."""
+    try:
+        import zipfile
+        if zipfile.is_zipfile(file_path):
+            with zipfile.ZipFile(file_path, 'r') as z:
+                names = z.namelist()
+                if any('3dmodel.model' in n or n.endswith('.model') for n in names):
+                    return True, None
+        return False, "Invalid 3MF file format"
+    except Exception as e:
+        return False, f"Error validating 3MF file: {str(e)}"
+
+
+def validate_ply_file(file_path: str) -> Tuple[bool, Optional[str]]:
+    """Validate PLY file integrity."""
+    try:
+        with open(file_path, 'rb') as f:
+            header = f.read(4)
+            if header == b'ply\n' or header.startswith(b'ply'):
+                return True, None
+        return False, "Invalid PLY file format"
+    except Exception as e:
+        return False, f"Error validating PLY file: {str(e)}"
+
+
 def validate_file_integrity(file_path: str, extension: str) -> Tuple[bool, Optional[str]]:
     """Validate file integrity based on extension."""
     ext = extension.lower()
     if ext == ".stl":
         return validate_stl_file(file_path)
-    elif ext in [".step", ".stp"]:
+    elif ext in (".step", ".stp"):
         return validate_step_file(file_path)
+    elif ext == ".obj":
+        return validate_obj_file(file_path)
+    elif ext == ".3mf":
+        return validate_3mf_file(file_path)
+    elif ext == ".ply":
+        return validate_ply_file(file_path)
     return False, "Unsupported file type for validation"
 
 def extract_stl_bounds(file_path: str) -> Tuple[Optional[dict], Optional[str]]:
