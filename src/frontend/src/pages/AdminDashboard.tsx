@@ -4,7 +4,7 @@ import {
     TableCell, TableContainer, TableHead, TableRow, Chip, Button,
     Divider, Stack, IconButton, Tab, Tabs, TextField, CircularProgress,
     AppBar, Toolbar, Alert, Tooltip, Dialog, DialogTitle, DialogContent,
-    DialogActions
+    DialogActions, FormControl, InputLabel, Select, MenuItem
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -61,6 +61,30 @@ const AdminDashboard: React.FC = () => {
     const [materialDialog, setMaterialDialog] = useState(false);
     const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
     const [materialFormData, setMaterialFormData] = useState({ name: '', density_g_cm3: 0, cost_per_gram: 0 });
+
+    // Job Label States
+    const [labelDialog, setLabelDialog] = useState(false);
+    const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+    const [selectedLabel, setSelectedLabel] = useState('');
+    const [customLabel, setCustomLabel] = useState('');
+
+    const predefinedLabels = [
+        'Post processing',
+        'Pre processing',
+        'Smoothing',
+        'Support removal',
+        'Sanding',
+        'Painting',
+        'Assembly',
+        'Quality check',
+        'Post-curing',
+        'Heat treatment',
+        'Machining',
+        'Surface treatment',
+        'Packaging',
+        'Testing',
+        'Calibration'
+    ];
 
     const loadAllData = async () => {
         setRefreshing(true);
@@ -142,6 +166,32 @@ const AdminDashboard: React.FC = () => {
             setConfig({ ...config, [key]: value });
         } catch (err) {
             alert('Failed to update configuration');
+        }
+    };
+
+    // Job Label Actions
+    const handleOpenLabelDialog = (job: Job) => {
+        setSelectedJob(job);
+        setSelectedLabel(job.processing_label || '');
+        setCustomLabel(job.processing_label && !predefinedLabels.includes(job.processing_label) ? job.processing_label : '');
+        setLabelDialog(true);
+    };
+
+    const handleSaveLabel = async () => {
+        if (!selectedJob) return;
+        
+        const finalLabel = selectedLabel === 'Custom' ? customLabel : selectedLabel;
+        if (!finalLabel) {
+            alert('Please select or enter a label');
+            return;
+        }
+
+        try {
+            await adminAPI.updateJobLabel(selectedJob.job_id, finalLabel);
+            setLabelDialog(false);
+            loadAllData();
+        } catch (err) {
+            alert('Failed to update job label');
         }
     };
 
@@ -279,15 +329,16 @@ const AdminDashboard: React.FC = () => {
                                         <TableRow sx={{ bgcolor: 'rgba(0,0,0,0.02)' }}>
                                             <TableCell sx={{ fontWeight: 700 }}>Job Reference</TableCell>
                                             <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                                            <TableCell sx={{ fontWeight: 700 }}>Material</TableCell>
-                                            <TableCell sx={{ fontWeight: 700 }}>Total Cost</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Filename</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Label</TableCell>
                                             <TableCell sx={{ fontWeight: 700 }}>Timestamp</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
                                         {jobs.map((job) => (
-                                            <TableRow key={job.job_id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/job/${job.job_id}`)}>
-                                                <TableCell sx={{ fontWeight: 600, color: 'primary.main' }}>
+                                            <TableRow key={job.job_id} hover>
+                                                <TableCell sx={{ fontWeight: 600, color: 'primary.main', cursor: 'pointer' }} onClick={() => navigate(`/job/${job.job_id}`)}>
                                                     {job.job_id.substring(0, 8)}...
                                                 </TableCell>
                                                 <TableCell>
@@ -299,8 +350,32 @@ const AdminDashboard: React.FC = () => {
                                                     />
                                                 </TableCell>
                                                 <TableCell>{job.filename}</TableCell>
-                                                <TableCell sx={{ fontWeight: 800 }}>
+                                                <TableCell>
+                                                    {job.processing_label ? (
+                                                        <Chip
+                                                            label={job.processing_label}
+                                                            size="small"
+                                                            color="secondary"
+                                                            variant="outlined"
+                                                        />
+                                                    ) : (
+                                                        <Typography variant="caption" color="text.secondary">No label</Typography>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell sx={{ fontWeight: 600 }}>
                                                     {new Date(job.created_at).toLocaleString()}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenLabelDialog(job);
+                                                        }}
+                                                        color="primary"
+                                                    >
+                                                        <EditIcon fontSize="small" />
+                                                    </IconButton>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -419,6 +494,47 @@ const AdminDashboard: React.FC = () => {
                 <DialogActions>
                     <Button onClick={() => setMaterialDialog(false)}>Cancel</Button>
                     <Button onClick={handleSaveMaterial} variant="contained">Save</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={labelDialog} onClose={() => setLabelDialog(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>Update Job Label</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ pt: 1 }}>
+                        <FormControl fullWidth margin="normal">
+                            <InputLabel>Select Label</InputLabel>
+                            <Select
+                                value={selectedLabel}
+                                label="Select Label"
+                                onChange={(e) => {
+                                    setSelectedLabel(e.target.value);
+                                    if (e.target.value !== 'Custom') {
+                                        setCustomLabel('');
+                                    }
+                                }}
+                            >
+                                <MenuItem value="">No label</MenuItem>
+                                {predefinedLabels.map((label) => (
+                                    <MenuItem key={label} value={label}>{label}</MenuItem>
+                                ))}
+                                <MenuItem value="Custom">Custom...</MenuItem>
+                            </Select>
+                        </FormControl>
+                        {selectedLabel === 'Custom' && (
+                            <TextField
+                                label="Custom Label"
+                                fullWidth
+                                margin="normal"
+                                value={customLabel}
+                                onChange={(e) => setCustomLabel(e.target.value)}
+                                placeholder="Enter custom label"
+                            />
+                        )}
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setLabelDialog(false)}>Cancel</Button>
+                    <Button onClick={handleSaveLabel} variant="contained">Save Label</Button>
                 </DialogActions>
             </Dialog>
         </Box>
