@@ -19,6 +19,7 @@ export interface Job {
   file_size: number;
   created_at: string;
   updated_at?: string;
+  processing_label?: string;
   slicing_result?: SlicingResult;
   failure_reason?: string;
   failure_type?: string;

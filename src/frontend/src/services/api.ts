@@ -149,6 +149,10 @@ export const adminAPI = {
     const response = await api.get('/api/admin/all-jobs', { params: { skip, limit } });
     return response.data;
   },
+  updateJobLabel: async (jobId: string, label: string): Promise<Job> => {
+    const response = await api.put(`/api/admin/jobs/${jobId}/label`, { processing_label: label });
+    return response.data;
+  },
   getSystemLogs: async (lines = 100): Promise<{ logs: string }> => {
     const response = await api.get('/api/admin/system-logs', { params: { lines } });
     return response.data;
