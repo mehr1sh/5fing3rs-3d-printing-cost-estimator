@@ -2,7 +2,7 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [main, develop, "feat/**", "release/**"]
+    branches: [main, develop, "feat/**", "release/**", "add-tests"]
   pull_request:
     branches: [main, develop]
 
@@ -147,4 +147,3 @@ jobs:
         # E501 = line too long  |  W503 = line break before binary op
         run: flake8 app/ --max-line-length=120 --ignore=E501,W503 --statistics
         continue-on-error: true   # warnings only — remove to make this blocking
-        
