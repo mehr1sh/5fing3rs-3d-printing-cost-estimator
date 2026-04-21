@@ -7,8 +7,10 @@ from app.models.user import User
 from app.models.material import Material
 from app.models.admin_config import AdminConfig
 from app.models.failure_log import FailureLog
+from app.models.job import Job
 from app.schemas.material import MaterialCreate, MaterialUpdate, MaterialResponse
 from app.schemas.admin import AdminConfigResponse, AdminConfigUpdate
+from app.schemas.job import JobLabelUpdate, JobResponse
 from app.api.auth import get_current_user
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -199,9 +201,40 @@ async def get_all_jobs(
     admin: User = Depends(require_admin)
 ):
     """Get all jobs in the system."""
-    from app.models.job import Job
     jobs = db.query(Job).order_by(Job.created_at.desc()).offset(skip).limit(limit).all()
     return jobs
+
+# Update Job Label
+@router.put("/jobs/{job_id}/label", response_model=JobResponse)
+async def update_job_label(
+    job_id: str,
+    label_data: JobLabelUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin)
+):
+    """Update the processing label for a job."""
+    from uuid import UUID
+    
+    try:
+        job_uuid = UUID(job_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid job ID format"
+        )
+    
+    job = db.query(Job).filter(Job.job_id == job_uuid).first()
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found"
+        )
+    
+    job.processing_label = label_data.processing_label
+    db.commit()
+    db.refresh(job)
+    
+    return job
 
 # System Logs
 @router.get("/system-logs")

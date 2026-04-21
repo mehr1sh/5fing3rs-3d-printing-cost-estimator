@@ -14,5 +14,6 @@ class Job(Base):
     file_path = Column(String(500), nullable=False)
     file_size = Column(Integer, nullable=False)
     status = Column(String(50), default="uploaded")
+    processing_label = Column(String(100), nullable=True)  # Admin label for completed jobs
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
