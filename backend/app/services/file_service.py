@@ -10,6 +10,7 @@ from app.utils.validators import (
     sanitize_filename,
     validate_file_integrity
 )
+from app.services.converter import convert_to_stl
 
 UPLOAD_DIR = Path("/app/uploads")
 GCODE_DIR = Path("/app/gcode")
@@ -25,7 +26,7 @@ async def save_uploaded_file(file: UploadFile, job_id: uuid.UUID) -> Tuple[str, 
     
     # Validate extension
     if not validate_file_extension(file.filename):
-        raise ValueError(f"Invalid file type. Allowed: {', '.join(['.stl', '.step', '.stp'])}")
+        raise ValueError(f"Invalid file type. Allowed: {', '.join(['.stl', '.step', '.stp', '.obj', '.3mf', '.ply'])}")
     
     # Sanitize filename
     original_filename = sanitize_filename(file.filename)
@@ -55,7 +56,16 @@ async def save_uploaded_file(file: UploadFile, job_id: uuid.UUID) -> Tuple[str, 
     if not is_valid:
         os.remove(file_path)
         raise ValueError(error_msg or "File validation failed")
-    
+
+    # Convert non-STL formats to model.stl for the slicing/viewing pipeline
+    if ext != ".stl":
+        stl_output = job_dir / "model.stl"
+        try:
+            convert_to_stl(str(file_path), str(stl_output), ext)
+        except Exception as conv_err:
+            os.remove(file_path)
+            raise ValueError(f"Could not convert {ext} to STL: {conv_err}")
+
     return str(file_path), original_filename, file_size
 
 def get_file_path(job_id: uuid.UUID, filename: str = "model.stl") -> Path:

@@ -34,13 +34,13 @@ async def process_slicing(
         job.status = "slicing"
         db.commit()
         
-        # Get file paths
-        stl_path = str(get_file_path(job_id, job.filename))
+        # Always use model.stl — non-STL uploads are converted to it at upload time
+        stl_path = str(get_file_path(job_id, "model.stl"))
         gcode_path = str(get_gcode_path(job_id))
-        
-        if not file_exists(get_file_path(job_id, job.filename)):
-            raise FileNotFoundError("Model file not found")
-        
+
+        if not file_exists(get_file_path(job_id, "model.stl")):
+            raise FileNotFoundError("Model file not found (expected model.stl after format conversion)")
+
         # Early Validation: Check Build Volume
         from app.utils.validators import extract_stl_bounds
         bounds, bounds_error = extract_stl_bounds(stl_path)
