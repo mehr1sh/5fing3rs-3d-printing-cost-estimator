@@ -1,6 +1,6 @@
 # 5Fing3rs 3D Printing Cost Estimator
 
-A cloud-based platform for 3D printing cost estimation with integrated slicing capabilities. Upload your STL files, configure slicing parameters, and get accurate cost estimates based on material usage, print time, and custom pricing models.
+A cloud-based platform for 3D printing cost estimation with integrated slicing capabilities. Upload your STL/STEP files, configure slicing parameters, and get accurate cost estimates based on material usage, print time, and custom pricing models.
 
 ## Features
 
